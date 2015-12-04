@@ -1,4 +1,4 @@
-#define BOOST_ALL_DYN_LINK 
+#define BOOST_ALL_DYN_LINK
 
 #include <boost/program_options.hpp>
 
@@ -29,9 +29,9 @@ int main(int ac, char* av[])
         }
         else if (vm.count("input-file"))
         {
-            //std::cout<<vm["input-file"]<<std::endl;
             Cat2Map c2m(vm["input-file"].as< std::string >());
             c2m.accumulate();
+            c2m.writeMaps();
         }
         else
         {
