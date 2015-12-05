@@ -30,6 +30,21 @@ public:
     {
         BOOST_LOG_TRIVIAL(info) << std::string("Reading the ini file ") + std::string(iniFileName);
         boost::property_tree::ini_parser::read_ini(iniFileName,mPropTree);
+
+        // set the output maps
+        BOOST_LOG_TRIVIAL(info) << "Resulution of the output map is "<<mPropTree.get<std::string>("output.n_side");
+
+        int nSide = mPropTree.get<int>("output.n_side");
+        mMapN.SetNside(nSide,RING);
+        mMapE1.SetNside(nSide,RING);
+        mMapE2.SetNside(nSide,RING);
+
+        mMapN.fill(double(0));
+        mMapE1.fill(double(0));
+        mMapE1.fill(double(0));
+
+        // read the mask
+        read_Healpix_map_from_fits(mPropTree.get<std::string>("input.mask_file_name"),mMask);
     }
 
     void accumulate()
@@ -41,18 +56,6 @@ public:
 
         if(inputCatFile.is_open())
         {
-            BOOST_LOG_TRIVIAL(info) << "Resulution of the output map is "<<mPropTree.get<std::string>("output.n_side");
-
-            int nSide = mPropTree.get<int>("output.n_side");
-            mMapN.SetNside(nSide,RING);
-            mMapE1.SetNside(nSide,RING);
-            mMapE2.SetNside(nSide,RING);
-
-            mMapN.fill(double(0));
-            mMapE1.fill(double(0));
-            mMapE1.fill(double(0));
-
-            //std::cout<<"num pix = "<<mMapN.Npix()<<std::endl;
 
             BOOST_LOG_TRIVIAL(info) << "Accumulating objects";
             BOOST_LOG_TRIVIAL(info) << "Number of rows to be skipped = " << mPropTree.get<std::string>("input.skip_rows");
@@ -92,11 +95,13 @@ public:
                         ents.push_back(boost::lexical_cast<double>(*tokIter));
                     }
 
-                    //assert(ents.size() >0);
-                    //assert(ents.size()<=8);
-
                     if(ents.size()>0)
                     {
+                        assert(col_ra<ents.size());
+                        assert(col_dec<ents.size());
+                        assert(col_ellip_1<ents.size());
+                        assert(col_ellip_2<ents.size());
+
                         double ra = ents[col_ra];
                         double dec = ents[col_dec];
                         double e1 = ents[col_ellip_1];
@@ -107,9 +112,14 @@ public:
 
                         auto pix = mMapE1.ang2pix(pointing(theta,phi));
 
-                        mMapN[pix] += double(1);
-                        mMapE1[pix] += e1;
-                        mMapE2[pix] += e2;
+                        // check if the pixel falls in the masked region
+                        if(mMask[pix]>0)
+                        {
+                            mMapN[pix] += double(1);
+                            mMapE1[pix] += e1;
+                            mMapE2[pix] += e2;
+                        }
+
                     }
 
                 }
@@ -122,10 +132,15 @@ public:
             // make it the average
             for(auto pix = 0; pix<mMapN.Npix(); ++pix)
             {
-                if(mMapN[pix]>1)
+                if(mMapN[pix]>0) // TODO how many gals we need to make an estimate
                 {
                     mMapE1[pix] /= mMapN[pix];
                     mMapE2[pix] /= mMapN[pix];
+                }
+                else
+                {
+                    // make the new mask
+                    mMask[pix] = 0;
                 }
             }
         }
@@ -142,8 +157,17 @@ public:
 
     void writeMaps()
     {
-        BOOST_LOG_TRIVIAL(info) << "Output file is  " << mPropTree.get<std::string>("output.output_file_name");
-        write_Healpix_map_to_fits(std::string("!")+mPropTree.get<std::string>("output.output_file_name"),mMapN,mMapE1,mMapE2,planckType<double>());
+        BOOST_LOG_TRIVIAL(info) << "Output data map file name :  "
+            << mPropTree.get<std::string>("output.data_map_file_name");
+
+        write_Healpix_map_to_fits(std::string("!")+mPropTree.get<std::string>("output.data_map_file_name"),
+            mMapN,mMapE1,mMapE2,planckType<double>());
+
+        BOOST_LOG_TRIVIAL(info) << "Output augmented mask file name :  "
+            << mPropTree.get<std::string>("output.augmented_mask_file_name");
+
+        write_Healpix_map_to_fits(std::string("!")+mPropTree.get<std::string>("output.augmented_mask_file_name"),
+            mMask,planckType<double>());
     }
 
 private:
@@ -151,6 +175,7 @@ private:
     mapType mMapN;
     mapType mMapE1;
     mapType mMapE2;
+    mapType mMask;
 
 };
 
