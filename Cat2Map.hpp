@@ -25,6 +25,7 @@ public:
     typedef Healpix_Map<double> mapType;
 
     static const constexpr double deg2rad = M_PI/double(180);
+    static const constexpr double rotPhi = double(0);
 
     Cat2Map(std::string const& iniFileName)
     {
@@ -108,7 +109,7 @@ public:
                         double e2 = ents[col_ellip_2];
 
                         double theta = -deg2rad*dec + M_PI*double(0.5);
-                        double phi = deg2rad*(ra - double(180.));
+                        double phi = deg2rad*(ra - rotPhi);
 
                         auto pix = mMapE1.ang2pix(pointing(theta,phi));
 
