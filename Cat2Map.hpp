@@ -137,9 +137,9 @@ public:
 
                             if(mDoTest)
                             {
-                                std::cout<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
-                                std::cout<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
-                                std::cout<<std::endl;
+                                //std::cout<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
+                                //std::cout<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
+                                //std::cout<<std::endl;
 
                                 assert(std::abs( (e1 - mTestE1[pix])/e1 ) < 1e-5);
                                 assert(std::abs( (e2 - mTestE2[pix])/e2 ) < 1e-5);
