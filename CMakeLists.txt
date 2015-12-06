@@ -44,3 +44,6 @@ include_directories(${HEALPix_INCLUDE_DIR})
 
 add_executable(Cat2Map Cat2Map.cpp)
 target_link_libraries(Cat2Map ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${HEALPix_LIBRARIES} ${CFITSIO_LIBRARIES})
+
+add_executable(testHEALPixIO testHEALPixIO.cpp)
+target_link_libraries(testHEALPixIO ${HEALPix_LIBRARIES} ${CFITSIO_LIBRARIES})

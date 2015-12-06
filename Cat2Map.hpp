@@ -46,6 +46,23 @@ public:
 
         // read the mask
         read_Healpix_map_from_fits(mPropTree.get<std::string>("input.mask_file_name"),mMask);
+
+        try
+        {
+            std::string testMapFileName = mPropTree.get<std::string>("test.map_file_name");
+
+            BOOST_LOG_TRIVIAL(info) << "Test map file specified as "<< testMapFileName;
+
+            read_Healpix_map_from_fits(testMapFileName,mTestE1,int(2),int(2));
+            read_Healpix_map_from_fits(testMapFileName,mTestE2,int(3),int(2));
+
+            mDoTest = true;
+        }
+        catch(std::exception)
+        {
+            BOOST_LOG_TRIVIAL(info) << "No test map file specified.";
+            mDoTest = false;
+        }
     }
 
     void accumulate()
@@ -113,9 +130,21 @@ public:
 
                         auto pix = mMapE1.ang2pix(pointing(theta,phi));
 
+
                         // check if the pixel falls in the masked region
                         if(mMask[pix]>0)
                         {
+
+                            if(mDoTest)
+                            {
+                                std::cout<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
+                                std::cout<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
+                                std::cout<<std::endl;
+
+                                assert(std::abs( (e1 - mTestE1[pix])/e1 ) < 1e-5);
+                                assert(std::abs( (e2 - mTestE2[pix])/e2 ) < 1e-5);
+                            }
+
                             mMapN[pix] += double(1);
                             mMapE1[pix] += e1;
                             mMapE2[pix] += e2;
@@ -177,6 +206,10 @@ private:
     mapType mMapE1;
     mapType mMapE2;
     mapType mMask;
+
+    mapType mTestE1;
+    mapType mTestE2;
+    bool mDoTest;
 
 };
 

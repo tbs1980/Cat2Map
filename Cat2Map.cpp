@@ -31,7 +31,7 @@ int main(int ac, char* av[])
         {
             Cat2Map c2m(vm["input-file"].as< std::string >());
             c2m.accumulate();
-            c2m.writeMaps();
+            //c2m.writeMaps();
         }
         else
         {
