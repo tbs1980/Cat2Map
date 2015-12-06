@@ -143,13 +143,13 @@ public:
 
                                 if(std::abs( (e1 - mTestE1[pix])/e1 ) >= 1e-5)
                                 {
-                                    std::cout<<"e1 mismatch\t"<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
+                                    std::cout<<"e1 mismatch\t"<<pix<<"\t"<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
                                 }
 
 
                                 if(std::abs( (e2 - mTestE2[pix])/e2 ) > 1e-5)
                                 {
-                                    std::cout<<"e2 mismatch\t"<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
+                                    std::cout<<"e2 mismatch\t"<<pix<<"\t"<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
                                 }
 
                                 //assert(std::abs( (e1 - mTestE1[pix])/e1 ) < 1e-5);
