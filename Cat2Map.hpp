@@ -63,6 +63,9 @@ public:
             BOOST_LOG_TRIVIAL(info) << "No test map file specified.";
             mDoTest = false;
         }
+        
+        mMisMatchCountE1 = size_t(0);
+        mMisMatchCountE2 = size_t(0);
     }
 
     void accumulate()
@@ -137,25 +140,20 @@ public:
 
                             if(mDoTest)
                             {
-                                //std::cout<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
-                                //std::cout<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
-                                //std::cout<<std::endl;
-
+                                // if testing accumulate the miss-match
+                                // between pixel values                     
                                 if(std::abs( (e1 - mTestE1[pix])/e1 ) >= 1e-5)
                                 {
-                                    std::cout<<"e1 mismatch\t"<<pix<<"\t"<<e1 <<"\t"<<mTestE1[pix]<<"\t"<<std::abs( (e1 - mTestE1[pix])/e1 )<<std::endl;
+                                    mMisMatchCountE1 += size_t(1);
                                 }
-
-
+                                
                                 if(std::abs( (e2 - mTestE2[pix])/e2 ) > 1e-5)
                                 {
-                                    std::cout<<"e2 mismatch\t"<<pix<<"\t"<<e2 <<"\t"<<mTestE2[pix]<<"\t"<<std::abs( (e2 - mTestE2[pix])/e2 )<<std::endl;
+                                    mMisMatchCountE2 += size_t(1);
                                 }
-
-                                //assert(std::abs( (e1 - mTestE1[pix])/e1 ) < 1e-5);
-                                //assert(std::abs( (e2 - mTestE2[pix])/e2 ) < 1e-5);
                             }
 
+                            // do accumulation
                             mMapN[pix] += double(1);
                             mMapE1[pix] += e1;
                             mMapE2[pix] += e2;
@@ -183,6 +181,17 @@ public:
                     // make the new mask
                     mMask[pix] = 0;
                 }
+            }
+            
+            // if testing print the mismatch stats
+            if(mDoTest)
+            {
+                size_t nPix = (size_t) mTestE1.Npix();
+                double fracMissMatchE1 = (double)mMisMatchCountE1 / (double)nPix;
+                double fracMissMatchE2 = (double)mMisMatchCountE2 / (double)nPix;
+                
+                BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e1 = "<<fracMissMatchE1;
+                BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e2 = "<<fracMissMatchE2;
             }
         }
         else
@@ -221,6 +230,8 @@ private:
     mapType mTestE1;
     mapType mTestE2;
     bool mDoTest;
+    size_t mMisMatchCountE1;
+    size_t mMisMatchCountE2;
 
 };
 
