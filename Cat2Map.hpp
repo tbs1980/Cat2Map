@@ -66,6 +66,7 @@ public:
         
         mMisMatchCountE1 = size_t(0);
         mMisMatchCountE2 = size_t(0);
+        mNumObsPix = size_t(0);
     }
 
     void accumulate()
@@ -157,6 +158,7 @@ public:
                             mMapN[pix] += double(1);
                             mMapE1[pix] += e1;
                             mMapE2[pix] += e2;
+                            mNumObsPix += size_t(1);
                         }
 
                     }
@@ -183,12 +185,17 @@ public:
                 }
             }
             
+            // output the sky fraction of the augmented mask
+            size_t nPix = (size_t) mTestE1.Npix();
+            double fKsy = (double)mNumObsPix / (double)nPix;
+            BOOST_LOG_TRIVIAL(info) << "Sky fraction " << fKsy;
+            
             // if testing print the mismatch stats
             if(mDoTest)
             {
-                size_t nPix = (size_t) mTestE1.Npix();
-                double fracMissMatchE1 = (double)mMisMatchCountE1 / (double)nPix;
-                double fracMissMatchE2 = (double)mMisMatchCountE2 / (double)nPix;
+                
+                double fracMissMatchE1 = (double)mMisMatchCountE1 / (double)mNumObsPix;
+                double fracMissMatchE2 = (double)mMisMatchCountE2 / (double)mNumObsPix;
                 
                 BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e1 = "<<fracMissMatchE1;
                 BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e2 = "<<fracMissMatchE2;
@@ -232,6 +239,7 @@ private:
     bool mDoTest;
     size_t mMisMatchCountE1;
     size_t mMisMatchCountE2;
+    size_t mNumObsPix;
 
 };
 
