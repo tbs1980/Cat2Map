@@ -63,7 +63,39 @@ public:
             BOOST_LOG_TRIVIAL(info) << "No test map file specified.";
             mDoTest = false;
         }
-        
+
+
+        try
+        {
+            std::string testMapFileName = mPropTree.get<std::string>("output.z_bounds");
+            BOOST_LOG_TRIVIAL(info) << "z bounds specified as "<< testMapFileName;
+            typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+            boost::char_separator<char> sep(",");
+            tokenizer tokens(testMapFileName, sep);
+
+
+            for(tokenizer::iterator tokIter = tokens.begin(); tokIter !=tokens.end(); ++tokIter)
+            {
+                mZBounds.push_back(boost::lexical_cast<double>(*tokIter));
+            }
+        }
+        catch(std::exception)
+        {
+            BOOST_LOG_TRIVIAL(info) << "No z bounds specified. All objects will be accumulated.";
+        }
+
+        if(mZBounds.size() != size_t(2))
+        {
+            std::string msg("The z-bounds should consist of two values. No more, no less.");
+            throw std::runtime_error(msg);
+        }
+
+        if(mZBounds[0] >= mZBounds[1])
+        {
+            std::string msg("The upper bound should be greater than the lower bound.");
+            throw std::runtime_error(msg);
+        }
+
         mMisMatchCountE1 = size_t(0);
         mMisMatchCountE2 = size_t(0);
         mNumObsPix = size_t(0);
@@ -126,6 +158,7 @@ public:
 
                         double ra = ents[col_ra];
                         double dec = ents[col_dec];
+                        double z = ents[col_z];
                         double e1 = ents[col_ellip_1];
                         double e2 = ents[col_ellip_2];
 
@@ -138,27 +171,29 @@ public:
                         // check if the pixel falls in the masked region
                         if(mMask[pix]>0)
                         {
-
-                            if(mDoTest)
+                            if(z >= mZBounds[0] and z < mZBounds[1])
                             {
-                                // if testing accumulate the miss-match
-                                // between pixel values                     
-                                if(std::abs( (e1 - mTestE1[pix])/e1 ) >= 1e-5)
+                                if(mDoTest)
                                 {
-                                    mMisMatchCountE1 += size_t(1);
-                                }
-                                
-                                if(std::abs( (e2 - mTestE2[pix])/e2 ) > 1e-5)
-                                {
-                                    mMisMatchCountE2 += size_t(1);
-                                }
-                            }
+                                    // if testing accumulate the miss-match
+                                    // between pixel values
+                                    if(std::abs( (e1 - mTestE1[pix])/e1 ) >= 1e-5)
+                                    {
+                                        mMisMatchCountE1 += size_t(1);
+                                    }
 
-                            // do accumulation
-                            mMapN[pix] += double(1);
-                            mMapE1[pix] += e1;
-                            mMapE2[pix] += e2;
-                            mNumObsPix += size_t(1);
+                                    if(std::abs( (e2 - mTestE2[pix])/e2 ) > 1e-5)
+                                    {
+                                        mMisMatchCountE2 += size_t(1);
+                                    }
+                                }
+
+                                // do accumulation
+                                mMapN[pix] += double(1);
+                                mMapE1[pix] += e1;
+                                mMapE2[pix] += e2;
+                                mNumObsPix += size_t(1);
+                            }
                         }
 
                     }
@@ -184,19 +219,19 @@ public:
                     mMask[pix] = 0;
                 }
             }
-            
+
             // output the sky fraction of the augmented mask
             size_t nPix = (size_t) mTestE1.Npix();
             double fKsy = (double)mNumObsPix / (double)nPix;
             BOOST_LOG_TRIVIAL(info) << "Sky fraction " << fKsy;
-            
+
             // if testing print the mismatch stats
             if(mDoTest)
             {
-                
+
                 double fracMissMatchE1 = (double)mMisMatchCountE1 / (double)mNumObsPix;
                 double fracMissMatchE2 = (double)mMisMatchCountE2 / (double)mNumObsPix;
-                
+
                 BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e1 = "<<fracMissMatchE1;
                 BOOST_LOG_TRIVIAL(warning) << "Pixel value miss-match for e2 = "<<fracMissMatchE2;
             }
@@ -233,6 +268,7 @@ private:
     mapType mMapE1;
     mapType mMapE2;
     mapType mMask;
+    std::vector<double> mZBounds;
 
     mapType mTestE1;
     mapType mTestE2;
