@@ -18,16 +18,38 @@
 #include <healpix_map_fitsio.h>
 #include <datatypes.h>
 
+/**
+ * \class Cat2Map
+ * \brief A class for converting catalogues to HEALPix maps
+ *
+ * This class reads a catalogue and convert the information to a
+ * HEALPix map.
+ */
 class Cat2Map
 {
 public:
+
+    /**
+     * \typedef boost::property_tree::ptree propertyTreeType
+     * \brief defines the property tree type
+     */
     typedef boost::property_tree::ptree propertyTreeType;
+
+    /**
+     * \typedef Healpix_Map<double> mapType
+     * \brief defines the HEALPix map type
+     */
     typedef Healpix_Map<double> mapType;
 
-    static const constexpr double deg2rad = M_PI/double(180);
-    static const constexpr double rotPhi = double(0);
+    static const constexpr double deg2rad = M_PI/double(180);/**< factor for converting degree to radians */
+    static const constexpr double rotPhi = double(0); /**< rotaion to phi required for convertion from ra */
 
-    Cat2Map(std::string const& iniFileName)
+    /**
+     * \brief The default constructor
+     *
+     * \param iniFileName name of the input configuration file
+     */
+    explicit Cat2Map(std::string const& iniFileName)
     {
         BOOST_LOG_TRIVIAL(info) << std::string("Reading the ini file ") + std::string(iniFileName);
         boost::property_tree::ini_parser::read_ini(iniFileName,mPropTree);
@@ -101,6 +123,9 @@ public:
         mNumObsPix = size_t(0);
     }
 
+    /**
+     * \brief A function that accumulates the objects in a catalogue
+     */
     void accumulate()
     {
         // open file for reading
@@ -247,6 +272,9 @@ public:
 
     }
 
+    /**
+     * \brief write the maps to fits files
+     */
     void writeMaps()
     {
         BOOST_LOG_TRIVIAL(info) << "Output data map file name :  "
@@ -263,19 +291,19 @@ public:
     }
 
 private:
-    propertyTreeType mPropTree;
-    mapType mMapN;
-    mapType mMapE1;
-    mapType mMapE2;
-    mapType mMask;
-    std::vector<double> mZBounds;
+    propertyTreeType mPropTree; /**< property tree that stores the ini file information */
+    mapType mMapN; /**< number density map */
+    mapType mMapE1; /**<  ellipticity-1 map */
+    mapType mMapE2; /**< ellipticity-2 map */
+    mapType mMask; /**< mask */
+    std::vector<double> mZBounds; /**< z bounds */
 
-    mapType mTestE1;
-    mapType mTestE2;
-    bool mDoTest;
-    size_t mMisMatchCountE1;
-    size_t mMisMatchCountE2;
-    size_t mNumObsPix;
+    mapType mTestE1; /**<  ellipticity-1 test map*/
+    mapType mTestE2; /**< ellipticity-2 test map */
+    bool mDoTest; /**< a flag to to sanity test */
+    size_t mMisMatchCountE1; /**< sanity check mismatch for ellipticity-1*/
+    size_t mMisMatchCountE2; /**< sanity check mismatch for ellipticity-2*/
+    size_t mNumObsPix; /**< number of observed pixels*/
 
 };
 
