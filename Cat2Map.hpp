@@ -59,12 +59,18 @@ public:
 
         int nSide = mPropTree.get<int>("output.n_side");
         mMapN.SetNside(nSide,RING);
+        mMapNNInv.SetNside(nSide,RING);
         mMapE1.SetNside(nSide,RING);
         mMapE2.SetNside(nSide,RING);
+        mMapE1NInv.SetNside(nSide,RING);
+        mMapE2NInv.SetNside(nSide,RING);
 
         mMapN.fill(double(0));
+        mMapNNInv.fill(double(0));
         mMapE1.fill(double(0));
         mMapE1.fill(double(0));
+        mMapE1NInv.fill(double(0));
+        mMapE2NInv.fill(double(0));
 
         // read the mask
         read_Healpix_map_from_fits(mPropTree.get<std::string>("input.mask_file_name"),mMask);
@@ -153,6 +159,8 @@ public:
             BOOST_LOG_TRIVIAL(info) << "Column of ellip_2 values = "<< col_ellip_2;
 
 
+
+
             size_t line_id = 0;
             while(!inputCatFile.eof())
             {
@@ -217,7 +225,9 @@ public:
                                 mMapN[pix] += double(1);
                                 mMapE1[pix] += e1;
                                 mMapE2[pix] += e2;
-                                mNumObsPix += size_t(1);
+                                mMapE1NInv[pix] += e1*e1;
+                                mMapE2NInv[pix] += e2*e2;
+                                //mNumObsPix += size_t(1); //TODO this is wrong
                             }
                         }
 
@@ -230,18 +240,52 @@ public:
                 }
             }
 
-            // make it the average
+            // make it the average , also count the total objects
+            double totObjs(0);
             for(auto pix = 0; pix<mMapN.Npix(); ++pix)
             {
                 if(mMapN[pix]>0) // TODO how many gals we need to make an estimate
                 {
                     mMapE1[pix] /= mMapN[pix];
                     mMapE2[pix] /= mMapN[pix];
+
+                    // var = E(X^2) - E(X)^2
+                    mMapE1NInv[pix] = ( mMapE1NInv[pix]/mMapN[pix] - mMapE1[pix]*mMapE1[pix]);
+                    mMapE2NInv[pix] = ( mMapE2NInv[pix]/mMapN[pix] - mMapE2[pix]*mMapE2[pix]);
+
+                    // nInv = 1/var
+                    if(mMapE1NInv[pix] > double(0) and mMapE2NInv[pix] > double(0) )
+                    {
+                        mMapE1NInv[pix] = double(1)/mMapE1NInv[pix];
+                        mMapE2NInv[pix] = double(1)/mMapE2NInv[pix];
+
+                        // compute the observed number of pixels in the data
+                        mNumObsPix += size_t(1);
+                        totObjs += mMapN[pix];
+
+                        //mMapNNInv[pix] = nbar; //TODO note that I may have to recalculate this again
+                    }
+                    else
+                    {
+                        // we don't have the variance properly defined
+                        mMask[pix] = 0;
+                        mMapE1NInv[pix] = 0.;
+                        mMapE2NInv[pix] = 0;
+                        mMapE1[pix] = 0;
+                        mMapE2[pix] = 0;
+                        mMapN[pix] = 0;
+                        mMapNNInv[pix] = 0;
+                    }
                 }
                 else
                 {
                     // make the new mask
                     mMask[pix] = 0;
+                    mMapE1NInv[pix] = 0.;
+                    mMapE2NInv[pix] = 0;
+                    mMapE1[pix] = 0;
+                    mMapE2[pix] = 0;
+                    mMapNNInv[pix] = 0;
                 }
             }
 
@@ -249,6 +293,24 @@ public:
             size_t nPix = (size_t) mTestE1.Npix();
             double fKsy = (double)mNumObsPix / (double)nPix;
             BOOST_LOG_TRIVIAL(info) << "Sky fraction " << fKsy;
+
+            BOOST_LOG_TRIVIAL(info) << "Toal objects in the map " << totObjs;
+
+            // output the n_bar or the mean number of objects per pixel
+            double nBar = totObjs/(double)mNumObsPix;
+            BOOST_LOG_TRIVIAL(info) << "Mean objects per pixel " << nBar;
+
+            assert(nBar > double(0));
+
+            // assign nbar to nInv map for number density
+            for(auto pix = 0; pix<mMapN.Npix(); ++pix)
+            {
+                if(mMapN[pix] > 0)
+                {
+                    mMapN[pix] = (mMapN[pix] - nBar)/nBar;
+                    mMapNNInv[pix] = nBar;
+                }
+            }
 
             // if testing print the mismatch stats
             if(mDoTest)
@@ -283,6 +345,12 @@ public:
         write_Healpix_map_to_fits(std::string("!")+mPropTree.get<std::string>("output.data_map_file_name"),
             mMapN,mMapE1,mMapE2,planckType<double>());
 
+        BOOST_LOG_TRIVIAL(info) << "Output nInv map file name :  "
+            << mPropTree.get<std::string>("output.nInv_map_file_name");
+
+        write_Healpix_map_to_fits(std::string("!")+mPropTree.get<std::string>("output.nInv_map_file_name"),
+            mMapNNInv,mMapE1NInv,mMapE2NInv,planckType<double>());
+
         BOOST_LOG_TRIVIAL(info) << "Output augmented mask file name :  "
             << mPropTree.get<std::string>("output.augmented_mask_file_name");
 
@@ -293,8 +361,11 @@ public:
 private:
     propertyTreeType mPropTree; /**< property tree that stores the ini file information */
     mapType mMapN; /**< number density map */
+    mapType mMapNNInv; /**< number density map */
     mapType mMapE1; /**<  ellipticity-1 map */
     mapType mMapE2; /**< ellipticity-2 map */
+    mapType mMapE1NInv; /**<  ellipticity-1 nInv map */
+    mapType mMapE2NInv; /**< ellipticity-2 nInv map */
     mapType mMask; /**< mask */
     std::vector<double> mZBounds; /**< z bounds */
 
